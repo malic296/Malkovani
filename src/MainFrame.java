@@ -1,10 +1,22 @@
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.io.*;
 import java.util.ArrayList;
+
 
 public class MainFrame extends JFrame {
     private DrawingPanel drawingPanel;
@@ -16,7 +28,68 @@ public class MainFrame extends JFrame {
     public Shape selectedShape;
     public ArrayList<Integer> freeHandX;
     public ArrayList<Integer> freeHandY;
+    private JTextField startXField, startYField, endXField, endYField, objectTypeField, objectColor, width, fill;
+    private boolean isListenerActive = true;
+    private int stroke_width = 5;
+    private void updateForm(Shape shape) {
+        if(shape != null){
+            isListenerActive = false;
+            startXField.setText(String.valueOf(shape.startX));
+            startYField.setText(String.valueOf(shape.startY));
+            endXField.setText(String.valueOf(shape.endX));
+            endYField.setText(String.valueOf(shape.endY));
+            objectTypeField.setText(shape.objectType);
+            objectColor.setText(shape.color.toString().format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()));
+            fill.setText(String.valueOf(shape.fill));
+            width.setText(String.valueOf(shape.stroke_width));
+            isListenerActive = true;
 
+            //System.out.println(shape.color.toString().format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()));
+        }
+
+    }
+
+    DocumentListener changeListener = new DocumentListener() {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            textChanged();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            textChanged();
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            textChanged();
+        }
+    };
+
+    private void textChanged(){
+        try {
+            if (selectedShape != null && isListenerActive == true) {
+                int newStartX = Integer.parseInt(startXField.getText());
+                int newStartY = Integer.parseInt(startYField.getText());
+                int newEndX = Integer.parseInt(endXField.getText());
+                int newEndY = Integer.parseInt(endYField.getText());
+                String newObjectType = objectTypeField.getText();
+                Color newColor = Color.decode(objectColor.getText());
+                boolean newFill = Boolean.parseBoolean(fill.getText());
+                int newWidth = Integer.parseInt(width.getText());
+
+                Shape newShape = new Shape(newStartX, newStartY, newEndX, newEndY, newObjectType, newColor, newFill, newWidth);
+
+                shapes.removeElement(selectedShape);
+                shapes.addElement(newShape);
+                selectedShape = newShape;
+                System.out.println(newColor);
+                repaint();
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input format");
+        }
+    }
     public class Shape{
         int startX;
         int startY;
@@ -53,7 +126,6 @@ public class MainFrame extends JFrame {
                     objectType, startX, startY, endX, endY);
         }
     }
-
     public MainFrame() {
         setTitle("Málkování");
         setSize(1200, 900);
@@ -87,6 +159,52 @@ public class MainFrame extends JFrame {
         subPanelDrawing1.add(button4);
         subPanelDrawing1.add(button5);
 
+        //Control panel
+        // Create form components
+        startXField = new JTextField(5);
+        startYField = new JTextField(5);
+        endXField = new JTextField(5);
+        endYField = new JTextField(5);
+        objectTypeField = new JTextField(10);
+        objectColor = new JTextField(5);
+        fill = new JTextField(5);
+        width = new JTextField(5);
+        JButton saveBtn = new JButton("Save");
+        JButton openBtn = new JButton("Open SVG");
+
+        // Add the document listener to all text fields
+        startXField.getDocument().addDocumentListener(changeListener);
+        startYField.getDocument().addDocumentListener(changeListener);
+        endXField.getDocument().addDocumentListener(changeListener);
+        endYField.getDocument().addDocumentListener(changeListener);
+        objectTypeField.getDocument().addDocumentListener(changeListener);
+        objectColor.getDocument().addDocumentListener(changeListener);
+        fill.getDocument().addDocumentListener(changeListener);
+        width.getDocument().addDocumentListener(changeListener);
+
+        // Create form layout
+        JPanel formPanel = new JPanel(new GridLayout(9, 2));
+        formPanel.add(new JLabel("Start X:"));
+        formPanel.add(startXField);
+        formPanel.add(new JLabel("Start Y:"));
+        formPanel.add(startYField);
+        formPanel.add(new JLabel("End X:"));
+        formPanel.add(endXField);
+        formPanel.add(new JLabel("End Y:"));
+        formPanel.add(endYField);
+        formPanel.add(new JLabel("Object Type:"));
+        formPanel.add(objectTypeField);
+        formPanel.add(new JLabel("Color:"));
+        formPanel.add(objectColor);
+        formPanel.add(new JLabel("Fill: "));
+        formPanel.add(fill);
+        formPanel.add(new JLabel("Width"));
+        formPanel.add(width);
+        formPanel.add(saveBtn);
+        formPanel.add(openBtn);
+
+        subPanel2.add(formPanel);
+
         JList<Shape> shapeList = new JList<>(shapes);
         shapeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         // Add shape list to subPanel1
@@ -98,9 +216,9 @@ public class MainFrame extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int index = shapeList.getSelectedIndex();
-                if (index != -1) {
+                if (index >= 0) {
                     selectedShape = shapes.getElementAt(index);
-
+                    updateForm(selectedShape);
                 }
             }
         });
@@ -118,7 +236,8 @@ public class MainFrame extends JFrame {
             }
         });
 
-
+        saveBtn.addActionListener(e -> saveSVG());
+        openBtn.addActionListener(e -> openSVG());
 
         subPanelDrawing1.setMaximumSize(new Dimension(Integer.MAX_VALUE, subPanelDrawing1.getPreferredSize().height));
 
@@ -137,12 +256,115 @@ public class MainFrame extends JFrame {
 
     }
 
+    private void saveSVG() {
+        SVGCode code = new SVGCode(shapes, subPanelDrawing2.getHeight(), subPanelDrawing2.getWidth());
+        String finalCode = code.code;
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("SVG Files", "svg");
+        fileChooser.setFileFilter(filter);
+
+        int userSelection = fileChooser.showSaveDialog(this);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            java.io.File fileToSave = fileChooser.getSelectedFile();
+            String fileName = fileToSave.getAbsolutePath();
+
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+
+                writer.write(finalCode);
+
+                writer.close();
+
+                System.out.println("SVG code saved to " + fileName);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void openSVG() {
+        JFileChooser fileChooser = new JFileChooser();
+
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("SVG files", "svg");
+        fileChooser.setFileFilter(filter);
+
+        int returnValue = fileChooser.showOpenDialog(this);
+
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+
+            try {
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder builder = factory.newDocumentBuilder();
+                Document document = builder.parse(selectedFile);
+
+                // Extract shapes from the SVG document
+                NodeList shapesRect = document.getElementsByTagName("rect");
+                for (int i = 0; i < shapesRect.getLength(); i++) {
+                    Element shapeElement = (Element) shapesRect.item(i);
+                    int startX = Integer.parseInt(shapeElement.getAttribute("x"));
+                    int startY = Integer.parseInt(shapeElement.getAttribute("y"));
+                    int width = Integer.parseInt(shapeElement.getAttribute("width"));
+                    int height = Integer.parseInt(shapeElement.getAttribute("height"));
+                    int strokeWidth = Integer.parseInt(shapeElement.getAttribute("stroke-width"));
+                    String fillValue = shapeElement.getAttribute("fill");
+                    Color color = Color.decode(shapeElement.getAttribute("stroke"));
+
+                    MainFrame.Shape shape = new MainFrame.Shape(startX, startY, startX + width, startY + height, "Rectangle", color, !fillValue.equals("none"), strokeWidth);
+                    shapes.addElement(shape);
+                }
+                NodeList shapesEllipse = document.getElementsByTagName("ellipse");
+                for (int i = 0; i < shapesEllipse.getLength(); i++) {
+                    Element shapeElement = (Element) shapesEllipse.item(i);
+                    int cx = Integer.parseInt(shapeElement.getAttribute("cx"));
+                    int cy = Integer.parseInt(shapeElement.getAttribute("cy"));
+                    int rx = Integer.parseInt(shapeElement.getAttribute("rx"));
+                    int ry = Integer.parseInt(shapeElement.getAttribute("ry"));
+                    int strokeWidth = Integer.parseInt(shapeElement.getAttribute("stroke-width"));
+                    String fillValue = shapeElement.getAttribute("fill");
+                    Color color = Color.decode(shapeElement.getAttribute("stroke"));
+                    int startX = cx - rx;
+                    int endX = cx + rx;
+                    int startY = cy - ry;
+                    int endY = cy + ry;
+
+                    MainFrame.Shape shape = new MainFrame.Shape(startX,startY,endX, endY,"Ellipse", color, !fillValue.equals("none"), strokeWidth);
+                    shapes.addElement(shape);
+                }
+
+                NodeList shapesLine = document.getElementsByTagName("line");
+                for (int i = 0; i < shapesLine.getLength(); i++) {
+                    Element shapeElement = (Element) shapesLine.item(i);
+                    int startX = Integer.parseInt(shapeElement.getAttribute("x1"));
+                    int startY = Integer.parseInt(shapeElement.getAttribute("y1"));
+                    int endX = Integer.parseInt(shapeElement.getAttribute("x2"));
+                    int endY = Integer.parseInt(shapeElement.getAttribute("y2"));
+                    int strokeWidth = Integer.parseInt(shapeElement.getAttribute("stroke-width"));
+                    Color color = Color.decode(shapeElement.getAttribute("stroke"));
+
+                    MainFrame.Shape shape = new MainFrame.Shape(startX, startY, endX, endY, "Line", color, false, strokeWidth);
+                    shapes.addElement(shape);
+                }
+
+                repaint();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Error reading SVG file", "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (ParserConfigurationException | org.xml.sax.SAXException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Error parsing SVG file", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
 
 
     public void drawPoint(int x, int y) {
         Graphics2D g = (Graphics2D) subPanelDrawing2.getGraphics();
         g.setColor(color);
-        g.fillOval(x, y, 10, 10);
+        g.fillOval(x, y, stroke_width, stroke_width);
     }
 
     public void drawRect(int x1, int y1, int x2, int y2) {
@@ -152,17 +374,17 @@ public class MainFrame extends JFrame {
         int startY = Math.min(y1, y2);
         int endY = Math.max(y1, y2);
 
-        shapes.addElement(new Shape(startX, startY, endX, endY, "Rectangle", color, false, 10));
+        shapes.addElement(new Shape(startX, startY, endX, endY, "Rectangle", color, false, stroke_width));
         repaint();
     }
 
     public void drawLine(int x1, int y1, int x2, int y2) {
-        shapes.addElement(new Shape(x1, y1, x2, y2, "Line", color, false, 10));
+        shapes.addElement(new Shape(x1, y1, x2, y2, "Line", color, false, stroke_width));
         repaint();
     }
 
     public void drawEllipse(int x1, int y1, int x2, int y2) {
-        shapes.addElement(new Shape(x1, y1, x2, y2, "Ellipse", color, false, 10));
+        shapes.addElement(new Shape(x1, y1, x2, y2, "Ellipse", color, false, stroke_width));
         repaint();
     }
 
@@ -174,6 +396,7 @@ public class MainFrame extends JFrame {
         for (int i = 0; i < shapes.size(); i++) {
             Shape shape = shapes.elementAt(i);
             g2d.setColor(shape.color);
+            g2d.setStroke(new BasicStroke(shape.stroke_width));
             switch(shape.objectType){
                 case("Line"):
                     g2d.drawLine(shape.startX, shape.startY, shape.endX, shape.endY);
@@ -181,6 +404,10 @@ public class MainFrame extends JFrame {
 
                 case("Ellipse"):
                     g2d.drawOval(shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY);
+                    if(shape.fill){
+                        g2d.fillOval(shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY);
+                    }
+
                     break;
 
                 case("Rectangle"):
@@ -189,6 +416,9 @@ public class MainFrame extends JFrame {
                     int width = shape.endX - shape.startX;
                     int height = shape.endY - shape.startY;
                     g2d.drawRect(x,y,width,height);
+                    if(shape.fill){
+                        g2d.fillRect(x,y,width,height);
+                    }
                     break;
                 case("Freehand"):
                     if(shape.xCoordinates != null && shape.yCoordinates != null){
@@ -204,6 +434,7 @@ public class MainFrame extends JFrame {
             }
 
         }
+
     }
 
     class DrawingPanel extends JPanel {
@@ -218,7 +449,7 @@ public class MainFrame extends JFrame {
         @Override
         public void mouseDragged(MouseEvent e) {
             Graphics2D g = (Graphics2D) subPanelDrawing2.getGraphics();
-
+            g.setStroke(new BasicStroke(stroke_width));
             if (currentDrawingMode.equals("Freehand")) {
                 drawPoint(e.getX(), e.getY());
                 freeHandX.add(e.getX());
@@ -231,7 +462,6 @@ public class MainFrame extends JFrame {
 
                 switch (currentDrawingMode) {
                     case "Rectangle":
-                        repaint();
                         g.drawRect(startX, startY, endX - startX, endY - startY);
                         break;
                     case "Ellipse":
@@ -257,7 +487,6 @@ public class MainFrame extends JFrame {
             startY = e.getY();
             freeHandX = new ArrayList<Integer>();
             freeHandY = new ArrayList<Integer>();
-
 
         }
 
