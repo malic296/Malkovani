@@ -15,6 +15,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 
 public class MainFrame extends JFrame {
@@ -371,11 +373,17 @@ public class MainFrame extends JFrame {
                         default:
                             break;
                     }
-                    shapes = shapesFromSVG;
-                    repaint();
 
                 }
             }
+            shapes.clear();
+            for (int i = 0; i <shapesFromSVG.size() ; i++) {
+                shapes.addElement(shapesFromSVG.getElementAt(i));
+            }
+
+            repaint();
+
+
         } catch (ParserConfigurationException | org.xml.sax.SAXException | java.io.IOException e) {
             e.printStackTrace();
         }
@@ -700,7 +708,7 @@ public class MainFrame extends JFrame {
                 if (!currentDrawingMode.equals("Freehand")) {
                     endX = e.getX();
                     endY = e.getY();
-                    System.out.println("Released");
+
                     if(startX != endX && startY != endY){
                         switch (currentDrawingMode) {
                             case "Rectangle":
