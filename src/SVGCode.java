@@ -27,7 +27,7 @@ public class SVGCode {
                 "\n" +
                 "<svg viewBox=\"0 0 "+ height + " " + width +"\">\n" +
                 "\n" +
-                "<g>";
+                "<g>\n";
         String obj = "";
         for (int i = 0; i < data.size(); i++) {
             MainFrame.Shape shape = (MainFrame.Shape) data.getElementAt(i);
@@ -37,7 +37,7 @@ public class SVGCode {
             int endY = shape.endY;
             int strokeWidth = shape.stroke_width;
             Color color = shape.color;
-            String colorHex = String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
+            String colorHex = String.format("#%06X", (0xFFFFFF & color.getRGB()));
             boolean fill = shape.fill;
             String fillValue;
             if(fill == true){
@@ -50,17 +50,17 @@ public class SVGCode {
             if (shape.objectType.equals("Rectangle")) {
                 int widthFinal = endX - startX;
                 int heightFinal = endY - startY;
-                obj = "<rect x=\"" + startX + "\" y=\"" + startY + "\" width=\"" + widthFinal + "\" height=\"" + heightFinal + "\" stroke-width=\"" + strokeWidth + "\" fill=\"" + fillValue + "\" stroke=\"" + colorHex + "\"/>";
+                obj = "<rect x=\"" + startX + "\" y=\"" + startY + "\" width=\"" + widthFinal + "\" height=\"" + heightFinal + "\" stroke-width=\"" + strokeWidth + "\" fill=\"" + fillValue + "\" stroke=\"" + colorHex + "\"/>\n";
                 code = code + obj;
             } else if (shape.objectType.equals("Ellipse")) {
                 int cx = (startX + endX) / 2;
                 int cy = (startY + endY) / 2;
                 int rx = Math.abs((endX - startX) / 2);
                 int ry = Math.abs((endY - startY) / 2);
-                obj = "<ellipse cx=\"" + cx + "\" cy=\"" + cy + "\" rx=\"" + rx + "\" ry=\"" + ry + "\" stroke-width=\"" + strokeWidth + "\" fill=\"" + fillValue + "\" stroke=\"" + colorHex + "\"/>";
+                obj = "<ellipse cx=\"" + cx + "\" cy=\"" + cy + "\" rx=\"" + rx + "\" ry=\"" + ry + "\" stroke-width=\"" + strokeWidth + "\" fill=\"" + fillValue + "\" stroke=\"" + colorHex + "\"/>\n";
                 code = code + obj;
             } else if (shape.objectType.equals("Line")) {
-                obj = "<line x1=\"" + startX + "\" y1=\"" + startY + "\" x2=\"" + endX + "\" y2=\"" + endY + "\" stroke-width=\"" + strokeWidth + "\" stroke=\"" + colorHex + "\"/>";
+                obj = "<line x1=\"" + startX + "\" y1=\"" + startY + "\" x2=\"" + endX + "\" y2=\"" + endY + "\" stroke-width=\"" + strokeWidth + "\" stroke=\"" + colorHex + "\"/>\n";
                 code = code + obj;
             }
             else{
